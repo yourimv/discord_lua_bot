@@ -2,8 +2,8 @@ local discordia = require('discordia')
 
 return {
     name = "ping",
-    descrption = "Ping the bot",
-    command = function(_, msg)
-        msg.channel:send('pong')
+    description = "Ping the bot",
+    command = function(_, message)
+        message.channel:send('pong')
     end
 }

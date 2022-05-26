@@ -2,6 +2,7 @@
 deps/
 *.log
 settings.lua
+gateway.json
 
 # Compiled Lua sources
 luac.out
