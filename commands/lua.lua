@@ -26,7 +26,7 @@ return {
 
         local str = ''
         for i,v in pairs(args) do
-            str = str ..'\n'.. v
+            str = str ..' '.. v
         end
 
         local lines = {}
