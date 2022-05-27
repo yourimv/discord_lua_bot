@@ -7,18 +7,21 @@ return {
         local embedfields = {}
         local embedTitle
         local embedDescription
+        local validArgs = true
         if (args[1]) then
+            local matchcommand
             for _, v in pairs(rest.commands) do
                 if string.lower(v.name) == string.lower(args[1]) then
-                    command = v
+                    matchcommand = v
                 end
             end
 
-            if (not command) then
+            if not matchcommand then
                 message.channel:send('No command/category found')
+                validArgs = false
             else
-                embedTitle = command.name
-                embedDescription = command.description
+                embedTitle = matchcommand.name
+                embedDescription = matchcommand.description
             end
         else
             for _, v in pairs(rest.commands) do
@@ -31,20 +34,22 @@ return {
             embedTitle = 'Help'
             embedDescription = 'For more information use ' .. rest.prefix ..'help {{command_name}}'
         end
-        message.channel:send{
-            embed = {
-                title = embedTitle,
-                description = embedDescription,
-                author = {
-                    name = 'LuaQT',
-                    icon_url = 'https://i.imgur.com/d8sRPMv.png'
-                },
-                fields = embedfields,
-                footer = {
-                    text = "Created in LUA because the author is retarded"
-                },
-                color = 0x333FFF
+        if validArgs then
+            message.channel:send{
+                embed = {
+                    title = embedTitle,
+                    description = embedDescription,
+                    author = {
+                        name = 'LuaQT',
+                        icon_url = 'https://i.imgur.com/d8sRPMv.png'
+                    },
+                    fields = embedfields,
+                    footer = {
+                        text = "Created in LUA because the author is retarded"
+                    },
+                    color = 0x333FFF
+                }
             }
-        }
+        end
     end
 }
