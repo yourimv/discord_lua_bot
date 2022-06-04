@@ -11,6 +11,16 @@ function printLine(...)
     return table.concat(ret, '\t')
 end
 
+local blacklist = {
+    'messageCreate',
+    'io%.',
+    'os%.',
+    'me%:',
+    'me%.',
+    'shutdown',
+    '183235848794406914',
+}
+
 return {
 	name = 'lua',
 	description = 'Executes lua code',
@@ -26,6 +36,11 @@ return {
 
         local str = ''
         for i,v in pairs(args) do
+            for j,b in pairs(blacklist) do
+                if string.find(v, b) then
+                    return message:reply('Blacklisted string found')
+                end
+            end
             str = str ..' '.. v
         end
 
@@ -36,10 +51,19 @@ return {
         end
 
         local fn, syntaxError = load(str, 'LuaQT', 't', sandbox)
-        if not fn then return message:reply(code(syntaxError)) end
+        if not fn then
+            return message:reply(code(syntaxError))
+        end
 
+        local timeout = false
+
+        local function f() error("timeout") end
+        debug.sethook(f,"",1e8)
         local success, runtimeError = pcall(fn)
-        if not success then return message:reply(code(runtimeError)) end
+
+        if not success then
+            return message:reply(code(runtimeError))
+        end
 
         lines = table.concat(lines, '\n')
 
