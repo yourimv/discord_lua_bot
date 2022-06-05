@@ -1,46 +1,40 @@
 local spawn = require('coro-spawn')
-local split = require('coro-split')
 local parse = require('url').parse
 local isActive = false
-local songQueue = {}
+local songURLQueue = {}
+local streamQueue = {}
 
-function getStream(url)
+function addSongToStreamQueue (url, message)
+    if url == nil then return end
+    local msg = message.channel:send('Fetching '..url..'... :fishing_pole_and_fish:')
     local child = spawn('youtube-dl', {
         args = {'-g', url},
-        stdio = {nil, true, true}
+        stdio = { nil, true, 2 }
     })
     local stream
-    function readstdout()
-        local stdout = child.stdout
-        for chunk in stdout.read do
-            local mime = parse(chunk, true).query.mime
-            if mime and mime:find('audio') then
-                stream = chunk
+    for chunk in child.stdout.read do
+        local urls = chunk:split('\n')
+        for _, yturl in pairs(urls) do
+            local mime = parse(yturl, true).query.mime
+            if mime and mime:find('audio') == 1 then
+                stream = yturl
             end
         end
-        return pcall(stdout.handle.close, stdout.handle)
     end
-    function readstderr()
-        local stderr = child.stderr
-        for chunk in stderr.read do
-            print(chunk)
-        end
-        return pcall(stderr.handle.close, stderr.handle)
-    end
-    split(readstdout, readstderr, child.waitExit)
-    return stream and stream:gsub('%c', '')
+    table.insert(streamQueue, stream)
+    msg:setContent('Now playing '..url..' :ok_hand:')
 end
 
 local play
-play = function(vc, connection)
-    if next(songQueue) == nil then
+play = function(vc, connection, message)
+    if next(streamQueue) == nil then
         connection:close()
         isActive = false
         return
     end
     local conn = vc:join()
-    isActive = true
-    conn:playFFmpeg(table.remove(songQueue,1))
+    conn:playFFmpeg(table.remove(streamQueue,1))
+    addSongToStreamQueue(table.remove(songURLQueue,1), message)
     play(vc, conn)
 end
 
@@ -48,18 +42,19 @@ return {
 	name = 'play',
 	description = 'description',
     command = function(args, message, client, rest)
-
         local requester = message.guild:getMember(message.author)
         local vc = requester.voiceChannel
-
         if vc == nil then
             message.channel:send('You must be connected to a voice channel in order to use this command')
             return
         end
-
-        table.insert(songQueue, getStream(args[1]))
         if not isActive then
-            play(vc, nil)
+            isActive = true
+            addSongToStreamQueue(args[1], message)
+            play(vc, nil, message)
+        else
+            message.channel:send('Added '..args[1]..'... to the song queue :pencil:')
+            table.insert(songURLQueue, args[1])
         end
 	end
 };
