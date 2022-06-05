@@ -1,8 +1,8 @@
-function code(str)
+local function code(str)
     return string.format('```\n%s```', str)
 end
 
-function printLine(...)
+local function printLine(...)
     local ret = {}
     for i = 1, select('#', ...) do
         local arg = tostring(select(i, ...))
@@ -25,7 +25,15 @@ return {
 	name = 'lua',
 	description = 'Executes lua code',
     command = function(args, message, client, rest)
-
+        if message.author.id ~= '183235848794406914' then
+            return message.channel:send {
+                content = 'Restricted command',
+                reference = {
+                    message = message,
+                    mention = false,
+                }
+            }
+        end
         local sandbox = {
             math = math,
             string = string,
@@ -51,11 +59,7 @@ return {
         end
 
         local fn, syntaxError = load(str, 'LuaQT', 't', sandbox)
-        if not fn then
-            return message:reply(code(syntaxError))
-        end
-
-        local timeout = false
+        if not fn then return message:reply(code(syntaxError)) end
 
         local function f() error("timeout") end
         debug.sethook(f,"",1e8)
