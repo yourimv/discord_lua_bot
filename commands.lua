@@ -3,6 +3,7 @@ return {
         'ping',
         'help',
         'gigabot',
+        'jerry',
         'lua',
         'play',
     }
