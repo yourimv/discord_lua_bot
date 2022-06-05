@@ -53,7 +53,7 @@ return {
             addSongToStreamQueue(args[1], message)
             play(vc, nil, message)
         else
-            message.channel:send('Added '..args[1]..'... to the song queue :pencil:')
+            message.channel:send('Added '..args[1]..' to the song queue :pencil:')
             table.insert(songURLQueue, args[1])
         end
 	end
