@@ -1,31 +1,35 @@
+local json = require('../json')
 local spawn = require('coro-spawn')
 local parse = require('url').parse
 local isActive = false
-local songURLQueue = {}
+local songQueue = {}
 local streamQueue = {}
+local songObj = nil
 
-local function getYoutubedl(argsTable, url)
+local function getYoutubedl(args, message)
     local child = spawn('youtube-dl', {
-        args = {'-g', url},
-        stdio = { nil, true, 2 }
+        args = args,
+        stdio = stdioArgs
     })
-    return child
+    if child then return child end
+    isActive = false
+    return message.channel:send('Error sourcing youtube-dl')
 end
 
-local function addSongToStreamQueue (url, message)
-    if url == nil then return end
-    print(url)
-    local child = spawn('youtube-dl', {
-        args = {'-g', url},
-        stdio = { nil, true, nil }
-    })
-    if not child then
-        isActive = false
-        return message.channel:send('Error sourcing youtube-dl')
+local function addSongToStreamQueue (ytobj, message)
+    if ytobj == nil then return end
+    local oldUrl = ytobj.url
+    if string.sub(ytobj.url, 1, #"https:") ~= "https:" then
+        ytobj.url = "ytsearch:" .. ytobj.url
     end
-    local msg = message.channel:send('Fetching '..url..'... :fishing_pole_and_fish:')
+    local res = spawn('youtube-dl', {
+        args = { '-g', ytobj.url },
+        stdio = { nil, true, 2 }
+    })
+    if not res then return message.channel:send('Error sourcing youtube-dl') end
+    local msg = message.channel:send('Fetching '..oldUrl..'... :fishing_pole_and_fish:')
     local stream
-    for chunk in child.stdout.read do
+    for chunk in res.stdout.read do
         local urls = chunk:split('\n')
         for _, yturl in pairs(urls) do
             local mime = parse(yturl, true).query.mime
@@ -35,39 +39,40 @@ local function addSongToStreamQueue (url, message)
         end
     end
     table.insert(streamQueue, stream)
-    msg:setContent('Now playing '..url..' :ok_hand:')
+    msg:setContent('Now playing: '..ytobj.title..' :ok_hand:')
 end
 
 local function getYoutubeVideoInfo(url)
     local url = url
-    if string.sub(url,1,#"https:") ~= "https:" then
-            url = "ytsearch:" .. url
+    if string.sub(url, 1, #"https:") ~= "https:" then
+        url = "ytsearch:" .. url
     end
-    local res = spawn("youtube-dl",{
-            args = {"-j","--rm-cache-dir","--skip-download",url},
-            stdio = {nil, true, nil}
+    local res = spawn("youtube-dl", {
+        args = { "-j", "--rm-cache-dir", "--skip-download", url },
+        stdio = {nil, true, nil}
     })
-    local information = {}
+    if not res then return message.channel:send('Error sourcing youtube-dl') end
+    local info = {}
     local json_string=""
     for i in res.stdout.read do
-            json_string = json_string .. i
+        json_string = json_string .. i
     end
-    local table_ = json.decode(json_string)
-    for _, formats in pairs(table_.formats) do
-            if formats["protocol"] == "https" and formats["container"] == "m4a_dash" then
-                    information["stream_url"] = formats["url"]
-                    break
-            end
+    local decodedJson = json.decode(json_string)
+    for _, formats in pairs(decodedJson.formats) do
+        if formats["protocol"] == "https" and formats["container"] == "m4a_dash" then
+            info["stream_url"] = formats["url"]
+            break
+        end
     end
-    information["thumbnail"] = table_["thumbnail"]
-    information["fulltitle"] = table_["fulltitle"]
-    information["view_count"] = table_["view_count"]
-    information["duration"] = table_["duration"]
-    information["channel_url"] = table_["channel_url"]
-    information["uploader"] = table_["uploader"]
-    information["id"] = table_["id"]
-    print(information["duration"])
-    return information
+    info["title"] = decodedJson["title"]
+    info["thumbnail"] = decodedJson["thumbnail"]
+    info["fulltitle"] = decodedJson["fulltitle"]
+    info["view_count"] = decodedJson["view_count"]
+    info["duration"] = decodedJson["duration"]
+    info["channel_url"] = decodedJson["channel_url"]
+    info["uploader"] = decodedJson["uploader"]
+    info["video_url"] = "https://www.youtube.com/watch?v="..decodedJson["id"]
+    return info
 end
 
 local play
@@ -78,8 +83,9 @@ play = function(vc, connection, message)
         return
     end
     local conn = vc:join()
-    conn:playFFmpeg(table.remove(streamQueue,1))
-    addSongToStreamQueue(table.remove(songURLQueue,1), message)
+    songObj = table.remove(songQueue, 1)
+    conn:playFFmpeg(table.remove(streamQueue, 1))
+    addSongToStreamQueue(songObj, message)
     play(vc, conn)
 end
 
@@ -93,24 +99,53 @@ return {
             message.channel:send('You must be connected to a voice channel in order to use this command')
             return
         end
-        if string.match(args[1], "v=(...........)") == nil then
-            message.channel:send {
-                content = 'Youtube URL not valid',
-                reference = {
-                    message = message,
-                    mention = false,
+        if args[1] == 'queue' and songObj ~= nil then
+            local embedFields = {}
+            table.insert(embedFields, {
+                name = "Now playing: ".. songObj.title,
+                value = songObj.url,
+                inline = false
+            })
+            for i, v in pairs(songQueue) do
+                table.insert(embedFields, {
+                    name = ""..i..": ".. v.title,
+                    value = v.url,
+                    inline = false
+                })
+            end
+            message.channel:send{
+                embed = {
+                    title = "Queue",
+                    description = "",
+                    author = {
+                        name = 'LuaQT',
+                        icon_url = 'https://i.imgur.com/d8sRPMv.png'
+                    },
+                    fields = embedFields,
+                    footer = {
+                        text = "Created in LUA because the author is retarded"
+                    },
+                    color = 0x333FFF
                 }
             }
             return
         end
+        local url = ""
+        if string.match(args[1], "v=(...........)") == nil then
+            for _, v in pairs(args) do
+                url = url .. v
+            end
+        else
+        end
+        local vidInfo = getYoutubeVideoInfo(url)
+        table.insert(songQueue, { query = url, url = vidInfo["video_url"], title = vidInfo["title"]})
         if not isActive then
             isActive = true
-            addSongToStreamQueue(args[1], message)
+            addSongToStreamQueue({ url = url, title = vidInfo["title"]}, message)
             play(vc, nil, message)
         else
-            table.insert(songURLQueue, args[1])
             message.channel:send {
-                content = 'Added '..args[1]..' to the song queue :pencil:',
+                content = 'Added '..vidInfo["title"]..' to the song queue :pencil:',
                 reference = {
                     message = message,
                     mention = false,
