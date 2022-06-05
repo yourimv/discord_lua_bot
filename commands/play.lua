@@ -4,13 +4,26 @@ local isActive = false
 local songURLQueue = {}
 local streamQueue = {}
 
-function addSongToStreamQueue (url, message)
-    if url == nil then return end
-    local msg = message.channel:send('Fetching '..url..'... :fishing_pole_and_fish:')
+local function getYoutubedl(argsTable, url)
     local child = spawn('youtube-dl', {
         args = {'-g', url},
         stdio = { nil, true, 2 }
     })
+    return child
+end
+
+local function addSongToStreamQueue (url, message)
+    if url == nil then return end
+    print(url)
+    local child = spawn('youtube-dl', {
+        args = {'-g', url},
+        stdio = { nil, true, nil }
+    })
+    if not child then
+        isActive = false
+        return message.channel:send('Error sourcing youtube-dl')
+    end
+    local msg = message.channel:send('Fetching '..url..'... :fishing_pole_and_fish:')
     local stream
     for chunk in child.stdout.read do
         local urls = chunk:split('\n')
@@ -23,6 +36,38 @@ function addSongToStreamQueue (url, message)
     end
     table.insert(streamQueue, stream)
     msg:setContent('Now playing '..url..' :ok_hand:')
+end
+
+local function getYoutubeVideoInfo(url)
+    local url = url
+    if string.sub(url,1,#"https:") ~= "https:" then
+            url = "ytsearch:" .. url
+    end
+    local res = spawn("youtube-dl",{
+            args = {"-j","--rm-cache-dir","--skip-download",url},
+            stdio = {nil, true, nil}
+    })
+    local information = {}
+    local json_string=""
+    for i in res.stdout.read do
+            json_string = json_string .. i
+    end
+    local table_ = json.decode(json_string)
+    for _, formats in pairs(table_.formats) do
+            if formats["protocol"] == "https" and formats["container"] == "m4a_dash" then
+                    information["stream_url"] = formats["url"]
+                    break
+            end
+    end
+    information["thumbnail"] = table_["thumbnail"]
+    information["fulltitle"] = table_["fulltitle"]
+    information["view_count"] = table_["view_count"]
+    information["duration"] = table_["duration"]
+    information["channel_url"] = table_["channel_url"]
+    information["uploader"] = table_["uploader"]
+    information["id"] = table_["id"]
+    print(information["duration"])
+    return information
 end
 
 local play

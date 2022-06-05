@@ -1,5 +1,3 @@
-local discordia = require('discordia')
-
 return {
     name = "ping",
     description = "Ping the bot",

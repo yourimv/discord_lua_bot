@@ -43,8 +43,8 @@ return {
         args[#args] = args[#args]:gsub('```\n?', '')
 
         local str = ''
-        for i,v in pairs(args) do
-            for j,b in pairs(blacklist) do
+        for _,v in pairs(args) do
+            for _,b in pairs(blacklist) do
                 if string.find(v, b) then
                     return message:reply('Blacklisted string found')
                 end

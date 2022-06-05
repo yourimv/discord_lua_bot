@@ -20,7 +20,7 @@ client:on('ready', function()
 	print('Logged in as '.. client.user.username)
 end)
 
-function runCommand(message)
+local function runCommand(message)
 	local args = helpers.string.split(message.content, ' ')
 	local commandString = string.gsub(args[1], settings.prefix, '')
 	commandString = string.lower(commandString)
