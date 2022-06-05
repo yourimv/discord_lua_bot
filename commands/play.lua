@@ -40,7 +40,7 @@ end
 
 return {
 	name = 'play',
-	description = 'description',
+	description = 'plays a song from a youtube url',
     command = function(args, message, client, rest)
         local requester = message.guild:getMember(message.author)
         local vc = requester.voiceChannel
@@ -48,13 +48,29 @@ return {
             message.channel:send('You must be connected to a voice channel in order to use this command')
             return
         end
+        if string.match(args[1], "v=(...........)") == nil then
+            message.channel:send {
+                content = 'Youtube URL not valid',
+                reference = {
+                    message = message,
+                    mention = false,
+                }
+            }
+            return
+        end
         if not isActive then
             isActive = true
             addSongToStreamQueue(args[1], message)
             play(vc, nil, message)
         else
-            message.channel:send('Added '..args[1]..' to the song queue :pencil:')
             table.insert(songURLQueue, args[1])
+            message.channel:send {
+                content = 'Added '..args[1]..' to the song queue :pencil:',
+                reference = {
+                    message = message,
+                    mention = false,
+                }
+            }
         end
 	end
 };
