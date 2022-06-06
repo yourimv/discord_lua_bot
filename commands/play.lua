@@ -1,3 +1,4 @@
+local helpers = require('helpers')
 local json = require('../json')
 local spawn = require('coro-spawn')
 local parse = require('url').parse
@@ -125,7 +126,7 @@ return {
                 url = url .. v
             end
         else
-            url = args[1]
+            url = helpers.string.split(args[1], '&')[1]
         end
         local vidInfo = getYoutubeVideoInfo(url)
         table.insert(songQueue, { query = url, url = vidInfo["video_url"], title = vidInfo["title"], thumbnail = vidInfo["thumbnail"]})
