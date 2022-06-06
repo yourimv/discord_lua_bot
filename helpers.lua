@@ -33,5 +33,3 @@ function table.arrayToString(tbl)
     str = str .. " ]"
     return str
 end
-
-return helpers

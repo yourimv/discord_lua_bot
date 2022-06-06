@@ -73,8 +73,8 @@ play = function(vc, connection, message)
         return
     end
     local conn = vc:join()
-    songObj = table.remove(songQueue, 1)
     conn:playFFmpeg(streamObj)
+    songObj = table.remove(songQueue, 1)
     setStreamObject(songObj, message)
     play(vc, conn, message)
 end
@@ -83,12 +83,10 @@ return {
 	name = 'play',
 	description = 'plays a song from a youtube url',
     command = function(args, message, client, rest)
+        if args[1] == nil then return message.channel:send('You must enter an additional argument') end
         local requester = message.guild:getMember(message.author)
         local vc = requester.voiceChannel
-        if vc == nil then
-            message.channel:send('You must be connected to a voice channel in order to use this command')
-            return
-        end
+        if vc == nil then return message.channel:send('You must be connected to a voice channel in order to use this command') end
         if args[1] == 'queue' and songObj ~= nil then
             local embedFields = {}
             table.insert(embedFields, {
@@ -111,6 +109,7 @@ return {
                         name = 'LuaQT',
                         icon_url = 'https://i.imgur.com/d8sRPMv.png'
                     },
+                    thumbnail = { url = songObj.thumbnail },
                     fields = embedFields,
                     footer = {
                         text = "Created in LUA because the author is retarded"
@@ -129,11 +128,11 @@ return {
             url = args[1]
         end
         local vidInfo = getYoutubeVideoInfo(url)
-        table.insert(songQueue, { query = url, url = vidInfo["video_url"], title = vidInfo["title"]})
+        table.insert(songQueue, { query = url, url = vidInfo["video_url"], title = vidInfo["title"], thumbnail = vidInfo["thumbnail"]})
         if not isActive then
-            isActive = true
-            setStreamObject({ url = url, title = vidInfo["title"]}, message)
             songObj = table.remove(songQueue, 1)
+            setStreamObject(songObj, message)
+            isActive = true
             play(vc, nil, message)
         else
             message.channel:send {
