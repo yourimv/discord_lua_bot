@@ -3,20 +3,10 @@ local spawn = require('coro-spawn')
 local parse = require('url').parse
 local isActive = false
 local songQueue = {}
-local streamQueue = {}
+local streamObj = nil
 local songObj = nil
 
-local function getYoutubedl(args, message)
-    local child = spawn('youtube-dl', {
-        args = args,
-        stdio = stdioArgs
-    })
-    if child then return child end
-    isActive = false
-    return message.channel:send('Error sourcing youtube-dl')
-end
-
-local function addSongToStreamQueue (ytobj, message)
+local function setStreamObject (ytobj, message)
     if ytobj == nil then return end
     local oldUrl = ytobj.url
     if string.sub(ytobj.url, 1, #"https:") ~= "https:" then
@@ -38,7 +28,7 @@ local function addSongToStreamQueue (ytobj, message)
             end
         end
     end
-    table.insert(streamQueue, stream)
+    streamObj = stream
     msg:setContent('Now playing: '..ytobj.title..' :ok_hand:')
 end
 
@@ -85,7 +75,7 @@ play = function(vc, connection, message)
     local conn = vc:join()
     songObj = table.remove(songQueue, 1)
     conn:playFFmpeg(table.remove(streamQueue, 1))
-    addSongToStreamQueue(songObj, message)
+    setStreamObject(songObj, message)
     play(vc, conn)
 end
 
@@ -141,7 +131,7 @@ return {
         table.insert(songQueue, { query = url, url = vidInfo["video_url"], title = vidInfo["title"]})
         if not isActive then
             isActive = true
-            addSongToStreamQueue({ url = url, title = vidInfo["title"]}, message)
+            setStreamObject({ url = url, title = vidInfo["title"]}, message)
             play(vc, nil, message)
         else
             message.channel:send {

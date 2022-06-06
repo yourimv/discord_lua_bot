@@ -7,7 +7,6 @@ return {
         local embedfields = {}
         local embedTitle
         local embedDescription
-        local validArgs = true
         if (args[1]) then
             local matchcommand
             for _, v in pairs(rest.commands) do
@@ -15,14 +14,9 @@ return {
                     matchcommand = v
                 end
             end
-
-            if not matchcommand then
-                message.channel:send('No command/category found')
-                validArgs = false
-            else
-                embedTitle = matchcommand.name
-                embedDescription = matchcommand.description
-            end
+            if not matchcommand then return message.channel:send('No command/category found') end
+            embedTitle = matchcommand.name
+            embedDescription = matchcommand.description
         else
             for _, v in pairs(rest.commands) do
                 table.insert(embedfields, {
@@ -34,22 +28,20 @@ return {
             embedTitle = 'Help'
             embedDescription = 'For more information use ' .. rest.prefix ..'help {{command_name}}'
         end
-        if validArgs then
-            message.channel:send{
-                embed = {
-                    title = embedTitle,
-                    description = embedDescription,
-                    author = {
-                        name = 'LuaQT',
-                        icon_url = 'https://i.imgur.com/d8sRPMv.png'
-                    },
-                    fields = embedfields,
-                    footer = {
-                        text = "Created in LUA because the author is retarded"
-                    },
-                    color = 0x333FFF
-                }
+        return message.channel:send{
+            embed = {
+                title = embedTitle,
+                description = embedDescription,
+                author = {
+                    name = 'LuaQT',
+                    icon_url = 'https://i.imgur.com/d8sRPMv.png'
+                },
+                fields = embedfields,
+                footer = {
+                    text = "Created in LUA because the author is retarded"
+                },
+                color = 0x333FFF
             }
-        end
+        }
     end
 }
