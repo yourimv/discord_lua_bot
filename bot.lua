@@ -2,6 +2,12 @@ local discordia = require('discordia')
 local settings = require('settings')
 local commands = require('commands')
 local helpers = require('helpers')
+local enums = discordia.enums
+local logger = discordia.Logger(
+	enums.logLevel.info,
+	"%F %T",
+	"./luaqt.log"
+)
 local client = discordia.Client()
 
 local commandList = {}
@@ -35,6 +41,7 @@ local function runCommand(message)
 	end
 
 	if commandObject then
+		logger:log(enums.logLevel.info, commandObject.name .." executed by user ".. message.author.name .. "("..message.author.id..") with args: " ..helpers.table.arrayToString(args))
 		commandObject.run(args, message, client, {
 			commands = commandList,
 			prefix = settings.prefix

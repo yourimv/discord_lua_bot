@@ -7,6 +7,7 @@ local streamObj = nil
 local songObj = nil
 
 local function setStreamObject (ytobj, message)
+    streamObj = nil
     if ytobj == nil then return end
     local oldUrl = ytobj.url
     if string.sub(ytobj.url, 1, #"https:") ~= "https:" then
@@ -32,8 +33,7 @@ local function setStreamObject (ytobj, message)
     msg:setContent('Now playing: '..ytobj.title..' :ok_hand:')
 end
 
-local function getYoutubeVideoInfo(url)
-    local url = url
+local function getYoutubeVideoInfo(url, message)
     if string.sub(url, 1, #"https:") ~= "https:" then
         url = "ytsearch:" .. url
     end
@@ -67,16 +67,16 @@ end
 
 local play
 play = function(vc, connection, message)
-    if next(streamQueue) == nil then
+    if streamObj == nil then
         connection:close()
         isActive = false
         return
     end
     local conn = vc:join()
     songObj = table.remove(songQueue, 1)
-    conn:playFFmpeg(table.remove(streamQueue, 1))
+    conn:playFFmpeg(streamObj)
     setStreamObject(songObj, message)
-    play(vc, conn)
+    play(vc, conn, message)
 end
 
 return {
@@ -126,12 +126,14 @@ return {
                 url = url .. v
             end
         else
+            url = args[1]
         end
         local vidInfo = getYoutubeVideoInfo(url)
         table.insert(songQueue, { query = url, url = vidInfo["video_url"], title = vidInfo["title"]})
         if not isActive then
             isActive = true
             setStreamObject({ url = url, title = vidInfo["title"]}, message)
+            songObj = table.remove(songQueue, 1)
             play(vc, nil, message)
         else
             message.channel:send {
