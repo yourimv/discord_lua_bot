@@ -6,5 +6,6 @@ return {
         'jerry',
         'lua',
         'play',
+        'mixer',
     }
 }
