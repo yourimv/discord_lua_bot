@@ -1,3 +1,4 @@
+local settings = require('settings')
 local helpers = require('helpers')
 local requester
 local vc
@@ -38,9 +39,35 @@ local operations = {
 
 return {
 	name = 'mixer',
-	description = 'WIP - make your own \'music\' with specific sounds',
+	description = 'WIP - make your own \'music\' with specific sounds. Type ;mixer help for help',
     command = function(args, message, client, rest)
 		if args[1] == nil then return message.channel:send('You must enter an additional argument') end
+		if args[1] == 'help' then
+			local embedFields = {}
+            for _, v in pairs(helpers.io.scanDir(settings.mixerSoundsPath)) do
+                table.insert(embedFields, {
+                    name = ""..v,
+                    value = "-",
+                    inline = true
+                })
+            end
+
+			return message.channel:send{
+				embed = {
+					title = "Mixer sounds",
+					description = "These sounds are available for use in the mixer",
+					author = {
+						name = 'LuaQT',
+						icon_url = 'https://i.imgur.com/d8sRPMv.png'
+					},
+					fields = embedFields,
+					footer = {
+						text = "Created in LUA because the author is retarded"
+					},
+					color = 0x333FFF
+				}
+			}
+		end
 		loopIndex = 1
 		requester = message.guild:getMember(message.author)
         vc = requester.voiceChannel

@@ -48,3 +48,14 @@ function table.shallowCopy(t)
     end
     return t2
 end
+
+-- IO
+function io.scanDir(directory)
+    local i, t, popen = 0, {}, io.popen
+    local pfile = popen('dir "'..directory..'" /b')
+    for filename in pfile:lines() do
+        i = i + 1
+        t[i] = filename
+    end
+    return t
+end
