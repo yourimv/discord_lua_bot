@@ -9,8 +9,8 @@ local function play(sound)
 	conn:playFFmpeg('commands\\mixer_sounds\\'..sound..'.mp3')
 end
 
-local function loop(args, iteration)
-	local amt = string.sub(args[loopIndex],6,6)
+local function loop(args)
+	local amt = args[loopIndex]:match("%((.-)%)")
 	local loopArgs = {}
 	if amt == "" then amt = 1 else amt = tonumber(amt) end
 	for _,arg in pairs(args) do
@@ -37,37 +37,33 @@ local operations = {
 	["loop"] = loop,
 }
 
+local function getHelpEmbed(message)
+	local embedFields = {}
+	table.insert(embedFields, {
+		name = "Mixer commands",
+		value = "These commands can be used. All commands accept ONE argument. \n i.e. FUNC(arg)",
+		inline = false
+	})
+	for k,_ in pairs(operations) do
+		table.insert(embedFields, { name = k, value = '​', inline = true })
+	end
+	table.insert(embedFields, {
+		name = "Mixer sounds",
+		value = "These sounds can be used and played by the mixer.",
+		inline = false
+	})
+	for _, v in pairs(helpers.io.scanDir(settings.mixerSoundsPath)) do
+		table.insert(embedFields, { name = ""..v, value = '​', inline = true })
+	end
+	return helpers.GET_EMBED("Mixer command options", "These options are available in the mixer command", embedFields, message)
+end
+
 return {
 	name = 'mixer',
 	description = 'WIP - make your own \'music\' with specific sounds. Type ;mixer help for help',
     command = function(args, message, client, rest)
 		if args[1] == nil then return message.channel:send('You must enter an additional argument') end
-		if args[1] == 'help' then
-			local embedFields = {}
-            for _, v in pairs(helpers.io.scanDir(settings.mixerSoundsPath)) do
-                table.insert(embedFields, {
-                    name = ""..v,
-                    value = "-",
-                    inline = true
-                })
-            end
-
-			return message.channel:send{
-				embed = {
-					title = "Mixer sounds",
-					description = "These sounds are available for use in the mixer",
-					author = {
-						name = 'LuaQT',
-						icon_url = 'https://i.imgur.com/d8sRPMv.png'
-					},
-					fields = embedFields,
-					footer = {
-						text = "Created in LUA because the author is retarded"
-					},
-					color = 0x333FFF
-				}
-			}
-		end
+		if args[1] == 'help' then return getHelpEmbed(message) end
 		loopIndex = 1
 		requester = message.guild:getMember(message.author)
         vc = requester.voiceChannel
@@ -82,5 +78,6 @@ return {
 			end
 			loopIndex = loopIndex + 1
 		end
+		conn:close()
 	end
 };

@@ -1,10 +1,10 @@
-local discordia = require('discordia')
+local helpers = require('helpers')
 
 return {
     name = "help",
     description = "Get the commands of the bot",
     command = function(args, message, _, rest)
-        local embedfields = {}
+        local embedFields = {}
         local embedTitle
         local embedDescription
         if (args[1]) then
@@ -19,7 +19,7 @@ return {
             embedDescription = matchcommand.description
         else
             for _, v in pairs(rest.commands) do
-                table.insert(embedfields, {
+                table.insert(embedFields, {
                     name = v.name,
                     value = v.description,
                     inline = false
@@ -28,20 +28,6 @@ return {
             embedTitle = 'Help'
             embedDescription = 'For more information use ' .. rest.prefix ..'help {{command_name}}'
         end
-        return message.channel:send{
-            embed = {
-                title = embedTitle,
-                description = embedDescription,
-                author = {
-                    name = 'LuaQT',
-                    icon_url = 'https://i.imgur.com/d8sRPMv.png'
-                },
-                fields = embedfields,
-                footer = {
-                    text = "Created in LUA because the author is retarded"
-                },
-                color = 0x333FFF
-            }
-        }
+        return helpers.GET_EMBED(embedTitle, embedDescription, embedFields, message)
     end
 }

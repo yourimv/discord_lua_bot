@@ -90,35 +90,11 @@ return {
         if vc == nil then return message.channel:send('You must be connected to a voice channel in order to use this command') end
         if args[1] == 'queue' and songObj ~= nil then
             local embedFields = {}
-            table.insert(embedFields, {
-                name = "Now playing: ".. songObj.title,
-                value = songObj.url,
-                inline = false
-            })
+            table.insert(embedFields, { name = "Now playing: ".. songObj.title, value = songObj.url, inline = false })
             for i, v in pairs(songQueue) do
-                table.insert(embedFields, {
-                    name = ""..i..": ".. v.title,
-                    value = v.url,
-                    inline = false
-                })
+                table.insert(embedFields, { name = ""..i..": ".. v.title, value = v.url, inline = false })
             end
-            message.channel:send{
-                embed = {
-                    title = "Queue",
-                    description = "",
-                    author = {
-                        name = 'LuaQT',
-                        icon_url = 'https://i.imgur.com/d8sRPMv.png'
-                    },
-                    thumbnail = { url = songObj.thumbnail },
-                    fields = embedFields,
-                    footer = {
-                        text = "Created in LUA because the author is retarded"
-                    },
-                    color = 0x333FFF
-                }
-            }
-            return
+            return helpers.GET_EMBED("Song queue", "​", embedFields, message, songObj.thumbnail)
         end
         local url = ""
         if string.match(args[1], "v=(...........)") == nil then

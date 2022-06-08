@@ -59,3 +59,23 @@ function io.scanDir(directory)
     end
     return t
 end
+
+-- LuaQT utils
+function GET_EMBED(title, description, embedFields, message, thumbnail)
+	return message.channel:send {
+		embed = {
+			title = title,
+			description = description,
+			author = {
+				name = 'LuaQT',
+				icon_url = 'https://i.imgur.com/d8sRPMv.png'
+			},
+            thumbnail = { url = thumbnail },
+			fields = embedFields,
+			footer = {
+				text = "Created in LUA because the author is retarded"
+			},
+			color = 0x333FFF
+		}
+	}
+end
