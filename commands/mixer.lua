@@ -1,28 +1,53 @@
 local settings = require('settings')
 local helpers = require('helpers')
+local spawn = require('coro-spawn')
 local requester
 local vc
 local conn
 local loopIndex
 
 local function play(sound)
-	conn:playFFmpeg('commands\\mixer_sounds\\'..sound..'.mp3')
+	conn:playFFmpeg(settings.mixerSoundsPath.."\\"..sound..'.mp3')
+end
+
+local function join(args)
+	local parameters = args[loopIndex]:match("%((.-)%)")
+	local files = helpers.string.split(parameters, ",")
+	local argTable = {}
+	table.insert(argTable, "-loglevel")
+	table.insert(argTable, "error")
+	for i=1,#files do
+		table.insert(argTable, "-i")
+		table.insert(argTable, settings.mixerSoundsPath.."\\"..files[i]..".mp3")
+	end
+	table.insert(argTable, "-filter_complex")
+	table.insert(argTable, "amix=inputs="..helpers.table.getLength(files)..":duration=first:dropout_transition=3")
+	table.insert(argTable, settings.mixerSoundsPath.."\\"..helpers.table.toString(files)..".mp3")
+
+    local res = spawn('ffmpeg', {
+        args = argTable,
+        stdio = { nil, true, 2 }
+    })
+	res.waitExit()
+	play(helpers.table.toString(files))
+	os.remove(settings.mixerSoundsPath.."\\"..helpers.table.toString(files)..".mp3")
 end
 
 local function loop(args)
+	local innerIndex = loopIndex
 	local amt = args[loopIndex]:match("%((.-)%)")
 	local loopArgs = {}
-	if amt == "" then amt = 1 else amt = tonumber(amt) end
-	for _,arg in pairs(args) do
-		if arg == "end" then
+	for i=1,#args do
+		if args[innerIndex] == "end" then
 			break
 		end
-		if not string.find(arg,"loop") then
-			table.insert(loopArgs,arg)
+		if not string.find(args[innerIndex], "loop") then
+			table.insert(loopArgs,args[innerIndex])
 		end
+		innerIndex = innerIndex + 1
 		loopIndex = loopIndex + 1
 	end
-	if amt > 1 then
+	if tonumber(amt) > 1 then
 		local loopArgsCopy = helpers.table.shallowCopy(loopArgs)
 		for _=2,amt do
 			helpers.table.concatinate(loopArgs, loopArgsCopy)
@@ -35,6 +60,7 @@ end
 
 local operations = {
 	["loop"] = loop,
+	["join"] = join,
 }
 
 local function getHelpEmbed(message)
@@ -68,14 +94,15 @@ return {
 		requester = message.guild:getMember(message.author)
         vc = requester.voiceChannel
 		conn = vc:join()
+		local operationPerformed = false
 		for i=1,#args do
 			for k,v in pairs(operations) do
 				if string.find(args[loopIndex],k) then
 					v(args)
-				elseif not string.find(args[loopIndex],"end") then
-					play(args[loopIndex])
+					operationPerformed = true
 				end
 			end
+			if not operationPerformed then play(args[loopIndex]) else operationPerformed = false end
 			loopIndex = loopIndex + 1
 		end
 		conn:close()
