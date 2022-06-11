@@ -34,20 +34,18 @@ local function join(args)
 end
 
 local function loop(args)
-	local innerIndex = loopIndex
-	local amt = args[loopIndex]:match("%((.-)%)")
+	local amt = tonumber(args[loopIndex]:match("%((.-)%)"))
 	local loopArgs = {}
 	for i=1,#args do
-		if args[innerIndex] == "end" then
+		if args[loopIndex] == "end" then
 			break
 		end
-		if not string.find(args[innerIndex], "loop") then
-			table.insert(loopArgs,args[innerIndex])
+		if not string.find(args[loopIndex], "loop") then
+			table.insert(loopArgs,args[loopIndex])
 		end
-		innerIndex = innerIndex + 1
 		loopIndex = loopIndex + 1
 	end
-	if tonumber(amt) > 1 then
+	if amt > 1 then
 		local loopArgsCopy = helpers.table.shallowCopy(loopArgs)
 		for _=2,amt do
 			helpers.table.concatinate(loopArgs, loopArgsCopy)
