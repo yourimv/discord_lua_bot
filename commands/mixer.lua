@@ -5,9 +5,30 @@ local requester
 local vc
 local conn
 local loopIndex
+local mixerFile
+local joinCache
 
-local function play(sound)
-	conn:playFFmpeg(settings.mixerSoundsPath.."\\"..sound..'.mp3')
+local function write(sound)
+	mixerFile:write("file \'"..settings.mixerSoundsPath.."\\"..sound..".mp3\'\n")
+end
+
+local function clearCache()
+	os.remove(settings.mixerSoundsPath.."\\temp\\mixerInputs.txt")
+	os.remove(settings.mixerSoundsPath.."\\temp\\mixerFile.mp3")
+	for _,v in pairs(joinCache) do os.remove(v) end
+end
+
+local function play()
+	local res = spawn('ffmpeg', {
+        args = {
+			"-loglevel", "error",
+			"-f", "concat", "-safe", "0", "-i", settings.mixerSoundsPath.."\\temp\\mixerInputs.txt",
+			"-c", "copy", settings.mixerSoundsPath.."\\temp\\mixerFile.mp3"
+		},
+        stdio = { nil, true, 2 }
+    })
+	res.waitExit()
+	conn:playFFmpeg(settings.mixerSoundsPath.."\\temp\\mixerFile.mp3")
 end
 
 local function join(args)
@@ -23,14 +44,13 @@ local function join(args)
 	table.insert(argTable, "-filter_complex")
 	table.insert(argTable, "amix=inputs="..helpers.table.getLength(files)..":duration=first:dropout_transition=3")
 	table.insert(argTable, settings.mixerSoundsPath.."\\"..helpers.table.toString(files)..".mp3")
-
     local res = spawn('ffmpeg', {
         args = argTable,
         stdio = { nil, true, 2 }
     })
 	res.waitExit()
-	play(helpers.table.toString(files))
-	os.remove(settings.mixerSoundsPath.."\\"..helpers.table.toString(files)..".mp3")
+	write(helpers.table.toString(files))
+	table.insert(joinCache, settings.mixerSoundsPath.."\\"..helpers.table.toString(files)..".mp3")
 end
 
 local function loop(args)
@@ -51,9 +71,7 @@ local function loop(args)
 			helpers.table.concatinate(loopArgs, loopArgsCopy)
 		end
 	end
-	for _,v in pairs(loopArgs) do
-		play(v)
-	end
+	for _,v in pairs(loopArgs) do write(v) end
 end
 
 local operations = {
@@ -92,17 +110,28 @@ return {
 		requester = message.guild:getMember(message.author)
         vc = requester.voiceChannel
 		conn = vc:join()
+		local done = false
 		local operationPerformed = false
+		mixerFile = io.open(settings.mixerSoundsPath.."\\temp\\mixerInputs.txt", "w")
+		joinCache = {}
 		for i=1,#args do
 			for k,v in pairs(operations) do
+				if args[loopIndex] == nil then
+					done = true
+					break
+				end
 				if string.find(args[loopIndex],k) then
 					v(args)
 					operationPerformed = true
 				end
 			end
-			if not operationPerformed then play(args[loopIndex]) else operationPerformed = false end
+			if done then break end
+			if not operationPerformed then write(args[loopIndex]) else operationPerformed = false end
 			loopIndex = loopIndex + 1
 		end
+		mixerFile:close()
+		play()
 		conn:close()
+		clearCache()
 	end
 };
