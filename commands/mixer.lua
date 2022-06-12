@@ -13,8 +13,8 @@ local function write(sound)
 end
 
 local function clearCache()
-	os.remove(settings.mixerSoundsPath.."\\temp\\mixerInputs.txt")
-	os.remove(settings.mixerSoundsPath.."\\temp\\mixerFile.mp3")
+	os.remove(settings.mixerSoundsPath.."\\mixer_temp\\mixerInputs.txt")
+	os.remove(settings.mixerSoundsPath.."\\mixer_temp\\mixerFile.mp3")
 	for _,v in pairs(joinCache) do os.remove(v) end
 end
 
@@ -22,13 +22,13 @@ local function play()
 	local res = spawn('ffmpeg', {
         args = {
 			"-loglevel", "error",
-			"-f", "concat", "-safe", "0", "-i", settings.mixerSoundsPath.."\\temp\\mixerInputs.txt",
-			"-c", "copy", settings.mixerSoundsPath.."\\temp\\mixerFile.mp3"
+			"-f", "concat", "-safe", "0", "-i", settings.mixerSoundsPath.."\\mixer_temp\\mixerInputs.txt",
+			"-c", "copy", settings.mixerSoundsPath.."\\mixer_temp\\mixerFile.mp3"
 		},
         stdio = { nil, true, 2 }
     })
 	res.waitExit()
-	conn:playFFmpeg(settings.mixerSoundsPath.."\\temp\\mixerFile.mp3")
+	conn:playFFmpeg(settings.mixerSoundsPath.."\\mixer_temp\\mixerFile.mp3")
 end
 
 local function join(args)
@@ -112,7 +112,7 @@ return {
 		conn = vc:join()
 		local done = false
 		local operationPerformed = false
-		mixerFile = io.open(settings.mixerSoundsPath.."\\temp\\mixerInputs.txt", "w")
+		mixerFile = io.open(settings.mixerSoundsPath.."\\mixer_temp\\mixerInputs.txt", "w")
 		joinCache = {}
 		for i=1,#args do
 			for k,v in pairs(operations) do
