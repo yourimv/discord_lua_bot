@@ -12,6 +12,12 @@ local function write(sound)
 	mixerFile:write("file \'"..settings.mixerSoundsPath.."\\"..sound..".mp3\'\n")
 end
 
+local function getOperationParameters(args)
+	local argument = args[loopIndex]:match("%((.-)%)")
+	local parameters = helpers.string.split(argument, ",")
+	return parameters
+end
+
 local function clearCache()
 	os.remove(settings.mixerSoundsPath.."\\mixer_temp\\mixerInputs.txt")
 	os.remove(settings.mixerSoundsPath.."\\mixer_temp\\mixerFile.mp3")
@@ -32,25 +38,24 @@ local function play()
 end
 
 local function join(args)
-	local parameters = args[loopIndex]:match("%((.-)%)")
-	local files = helpers.string.split(parameters, ",")
+	local parameters = getOperationParameters(args)
 	local argTable = {}
 	table.insert(argTable, "-loglevel")
 	table.insert(argTable, "error")
-	for i=1,#files do
+	for i=1,#parameters do
 		table.insert(argTable, "-i")
-		table.insert(argTable, settings.mixerSoundsPath.."\\"..files[i]..".mp3")
+		table.insert(argTable, settings.mixerSoundsPath.."\\"..parameters[i]..".mp3")
 	end
 	table.insert(argTable, "-filter_complex")
-	table.insert(argTable, "amix=inputs="..helpers.table.getLength(files)..":duration=first:dropout_transition=3")
-	table.insert(argTable, settings.mixerSoundsPath.."\\"..helpers.table.toString(files)..".mp3")
+	table.insert(argTable, "amix=inputs="..helpers.table.getLength(parameters)..":duration=first:dropout_transition=3")
+	table.insert(argTable, settings.mixerSoundsPath.."\\"..helpers.table.toString(parameters)..".mp3")
     local res = spawn('ffmpeg', {
         args = argTable,
         stdio = { nil, true, 2 }
     })
 	res.waitExit()
-	write(helpers.table.toString(files))
-	table.insert(joinCache, settings.mixerSoundsPath.."\\"..helpers.table.toString(files)..".mp3")
+	write(helpers.table.toString(parameters))
+	table.insert(joinCache, settings.mixerSoundsPath.."\\"..helpers.table.toString(parameters)..".mp3")
 end
 
 local function loop(args)
@@ -74,9 +79,31 @@ local function loop(args)
 	for _,v in pairs(loopArgs) do write(v) end
 end
 
+local function pitch(args)
+	local parameters = getOperationParameters(args)
+	local file = parameters[1]
+	local pitch = parameters[2]
+	local tempfile = "\\mixer_temp\\"..file.."_"..pitch
+	-- ffmpeg -i bruh.mp3 -af asetrate=44100*0.9,aresample=44100,atempo=1/0.9 output.mp3
+	local res = spawn('ffmpeg', {
+        args = {
+			"-loglevel", "error",
+			"-i", settings.mixerSoundsPath.."\\"..file..".mp3", "-af",
+			"asetrate="..pitch.."*0.9,aresample="..pitch..",atempo=1/0.9",
+			settings.mixerSoundsPath..tempfile..".mp3"
+		},
+        stdio = { nil, true, 2 }
+    })
+	res.waitExit()
+	write(tempfile)
+	table.insert(joinCache, settings.mixerSoundsPath..tempfile..".mp3")
+
+end
+
 local operations = {
 	["loop"] = loop,
 	["join"] = join,
+	["pitch"] = pitch,
 }
 
 local function getHelpEmbed(message)
@@ -130,6 +157,7 @@ return {
 			loopIndex = loopIndex + 1
 		end
 		mixerFile:close()
+		if conn == nil then clearCache() return message.channel:send("Cannot connect to the voice channel") end
 		play()
 		conn:close()
 		clearCache()
