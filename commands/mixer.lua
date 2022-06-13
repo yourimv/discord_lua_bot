@@ -84,7 +84,6 @@ local function pitch(args)
 	local file = parameters[1]
 	local pitch = parameters[2]
 	local tempfile = "\\mixer_temp\\"..file.."_"..pitch
-	-- ffmpeg -i bruh.mp3 -af asetrate=44100*0.9,aresample=44100,atempo=1/0.9 output.mp3
 	local res = spawn('ffmpeg', {
         args = {
 			"-loglevel", "error",
