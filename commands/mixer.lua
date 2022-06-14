@@ -6,7 +6,7 @@ local vc
 local conn
 local loopIndex
 local mixerFile
-local joinCache
+local tempFileCache
 
 local function write(sound)
 	mixerFile:write("file \'"..settings.mixerSoundsPath.."\\"..sound..".mp3\'\n")
@@ -21,7 +21,7 @@ end
 local function clearCache()
 	os.remove(settings.mixerSoundsPath.."\\mixer_temp\\mixerInputs.txt")
 	os.remove(settings.mixerSoundsPath.."\\mixer_temp\\mixerFile.mp3")
-	for _,v in pairs(joinCache) do os.remove(v) end
+	for _,v in pairs(tempFileCache) do os.remove(v) end
 end
 
 local function play()
@@ -37,7 +37,7 @@ local function play()
 	conn:playFFmpeg(settings.mixerSoundsPath.."\\mixer_temp\\mixerFile.mp3")
 end
 
-local function join(args)
+local function join(args, returnEntry)
 	local parameters = getOperationParameters(args)
 	local argTable = {}
 	table.insert(argTable, "-loglevel")
@@ -54,19 +54,35 @@ local function join(args)
         stdio = { nil, true, 2 }
     })
 	res.waitExit()
-	write(helpers.table.toString(parameters))
-	table.insert(joinCache, settings.mixerSoundsPath.."\\"..helpers.table.toString(parameters)..".mp3")
+	table.insert(tempFileCache, settings.mixerSoundsPath.."\\"..helpers.table.toString(parameters)..".mp3")
+	if returnEntry then return helpers.table.toString(parameters) else write(helpers.table.toString(parameters)) end
 end
 
-local function loop(args)
+local function loop(args,operations)
 	local amt = tonumber(args[loopIndex]:match("%((.-)%)"))
 	local loopArgs = {}
+	local functionExecuted
+	local skip
 	for i=1,#args do
+		skip = false
+		functionExecuted = false
 		if args[loopIndex] == "end" then
 			break
 		end
-		if not string.find(args[loopIndex], "loop") then
-			table.insert(loopArgs,args[loopIndex])
+		if string.find(args[loopIndex], "loop") then
+			skip = true
+		end
+		if not skip then
+			for k,v in pairs(operations) do
+				if string.find(args[loopIndex],k) then
+					table.insert(loopArgs, v(args, true))
+					functionExecuted = true
+					break
+				end
+			end
+			if not functionExecuted then
+				table.insert(loopArgs,args[loopIndex])
+			end
 		end
 		loopIndex = loopIndex + 1
 	end
@@ -79,7 +95,7 @@ local function loop(args)
 	for _,v in pairs(loopArgs) do write(v) end
 end
 
-local function pitch(args)
+local function pitch(args, returnEntry)
 	local parameters = getOperationParameters(args)
 	local file = parameters[1]
 	local pitch = parameters[2]
@@ -94,9 +110,8 @@ local function pitch(args)
         stdio = { nil, true, 2 }
     })
 	res.waitExit()
-	write(tempfile)
-	table.insert(joinCache, settings.mixerSoundsPath..tempfile..".mp3")
-
+	table.insert(tempFileCache, settings.mixerSoundsPath..tempfile..".mp3")
+	if returnEntry then return tempfile else write(tempfile) end
 end
 
 local operations = {
@@ -139,7 +154,7 @@ return {
 		local done = false
 		local operationPerformed = false
 		mixerFile = io.open(settings.mixerSoundsPath.."\\mixer_temp\\mixerInputs.txt", "w")
-		joinCache = {}
+		tempFileCache = {}
 		for i=1,#args do
 			for k,v in pairs(operations) do
 				if args[loopIndex] == nil then
@@ -147,7 +162,7 @@ return {
 					break
 				end
 				if string.find(args[loopIndex],k) then
-					v(args)
+					v(args,operations)
 					operationPerformed = true
 				end
 			end
