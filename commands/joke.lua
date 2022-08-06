@@ -15,10 +15,19 @@ return {
 		coroutine.wrap(function()
 			local res = helpers.HTTP_GET(url, http)
 			local joke = res['joke']
+			local delivery = '​'
 			if joke == nil then
-				return message.channel:send(res["setup"].."\n\n||"..res["delivery"].."||")
+				joke = res['setup']
+				delivery = '(Click for puncline)\n||'..res["delivery"].."||"
 			end
-			message.channel:send(joke)
+			local embedJoke = {
+				{
+					name = joke,
+					value = delivery,
+					inline=false
+				}
+			}
+			return helpers.GET_EMBED('Joke', 'Category: '..res['category'], embedJoke, message, nil)
 		end)()
 	end
 };
