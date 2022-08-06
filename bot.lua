@@ -17,6 +17,7 @@ for i,v in pairs(commands.commands) do
 	table.insert(commandList, {
 		name = command.name,
 		description = command.description,
+		aliases = command.aliases,
 		run = command.command
 	})
 end
@@ -32,11 +33,17 @@ local function runCommand(message)
 	commandString = string.lower(commandString)
 	args = table.slice(args, 2)
 
-	local commandObject
+	local commandObject = nil
 
-	for i,v in pairs(commandList) do
+	for _,v in pairs(commandList) do
+		local alias = helpers.table.getByValue(v.aliases, commandString)
 		if v.name == commandString then
 			commandObject = v
+			break
+		elseif alias then
+			commandObject = v
+			args = helpers.table.prepend(args, alias)
+			break
 		end
 	end
 

@@ -63,6 +63,27 @@ function table.getLength(t)
     return count
 end
 
+function table.getByValue(t, v)
+    if not t or not v then return nil end
+    local ret = nil
+    for _,j in pairs(t) do
+        if j == v then
+            ret =v
+        end
+    end
+    return ret
+end
+
+function table.prepend(t, v)
+    if not t or not v then return nil end
+    local migrate = {}
+    table.insert(migrate, v)
+    for _,value in pairs(t) do
+        table.insert(migrate, value)
+    end
+    return migrate
+end
+
 -- IO
 function io.scanDir(directory)
     local i, t, popen = 0, {}, io.popen

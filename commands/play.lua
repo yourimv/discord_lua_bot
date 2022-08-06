@@ -83,11 +83,17 @@ end
 return {
 	name = 'play',
 	description = 'plays a song from a youtube url',
+    aliases = { "skip", "queue" },
     command = function(args, message, client, rest)
         if args[1] == nil then return message.channel:send('You must enter an additional argument') end
         local requester = message.guild:getMember(message.author)
         local vc = requester.voiceChannel
         if vc == nil then return message.channel:send('You must be connected to a voice channel in order to use this command') end
+        -- Sub commands
+        if args[1] == 'skip' and songObj ~= nil then
+            vc:join():stopStream()
+            return
+        end
         if args[1] == 'queue' and songObj ~= nil then
             local embedFields = {}
             table.insert(embedFields, { name = "Now playing: ".. songObj.title, value = songObj.url, inline = false })
