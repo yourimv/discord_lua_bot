@@ -90,11 +90,12 @@ return {
         local vc = requester.voiceChannel
         if vc == nil then return message.channel:send('You must be connected to a voice channel in order to use this command') end
         -- Sub commands
-        if args[1] == 'skip' and songObj ~= nil then
-            vc:join():stopStream()
+        if args[1] == 'skip' and args[2] == nil then
+            if songObj ~= nil then vc:join():stopStream() end
             return
         end
-        if args[1] == 'queue' and songObj ~= nil then
+        if args[1] == 'queue' and args[2] == nil then
+            if songObj == nil then return message.channel:send("No song is currently playing!") end
             local embedFields = {}
             table.insert(embedFields, { name = "Now playing: ".. songObj.title, value = songObj.url, inline = false })
             for i, v in pairs(songQueue) do
