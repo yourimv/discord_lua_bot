@@ -1,4 +1,5 @@
 module("helpers", package.seeall)
+local json = require('./json')
 
 -- String Helpers
 function string.startswith(text, prefix)
@@ -110,9 +111,17 @@ function GET_EMBED(title, description, embedFields, message, thumbnail)
             thumbnail = { url = thumbnail },
 			fields = embedFields,
 			footer = {
-				text = "Created in LUA because the author is retarded"
+				text = "Powered by Discordia (Lua) 🌙"
 			},
 			color = 0x333FFF
 		}
 	}
+end
+
+function HTTP_GET(url, coroHttp)
+    local res, body = coroHttp.request('GET', url)
+    if res.code ~= 200 then
+        print("Could perform GET succesfully : " .. res.reason) return
+    end
+    return json.decode(body)
 end

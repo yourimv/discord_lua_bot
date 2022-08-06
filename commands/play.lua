@@ -82,7 +82,7 @@ end
 
 return {
 	name = 'play',
-	description = 'plays a song from a youtube url',
+	description = 'Plays a song from a youtube. If no URL is provided, the bot will search for a song!',
     aliases = { "skip", "queue" },
     command = function(args, message, client, rest)
         if args[1] == nil then return message.channel:send('You must enter an additional argument') end

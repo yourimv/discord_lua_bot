@@ -143,7 +143,7 @@ end
 
 return {
 	name = 'mixer',
-	description = 'WIP - make your own \'music\' with specific sounds. Type ;mixer help for help',
+	description = 'Make your own \'music\' with specific sounds. Type ;mixer help for help',
     command = function(args, message, client, rest)
 		if args[1] == nil then return message.channel:send('You must enter an additional argument') end
 		if args[1] == 'help' then return getHelpEmbed(message) end
