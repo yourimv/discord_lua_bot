@@ -14,6 +14,7 @@ return {
 		end
 		coroutine.wrap(function()
 			local res = helpers.HTTP_GET(url, http)
+			if res['error'] then return message.channel:send('ERROR: '..res['message']) end
 			local joke = res['joke']
 			local delivery = '​'
 			if joke == nil then

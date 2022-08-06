@@ -120,6 +120,6 @@ end
 
 function HTTP_GET(url, coroHttp)
     local res, body = coroHttp.request('GET', url)
-    if res.code ~= 200 then return end
+    if res.code ~= 200 then return nil end
     return json.decode(body)
 end
