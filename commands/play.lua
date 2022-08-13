@@ -2,13 +2,13 @@ local helpers = require('helpers')
 local json = require('../json')
 local spawn = require('coro-spawn')
 local parse = require('url').parse
-local isActive = false
+local isActive = {}
 local songQueue = {}
-local streamObj = nil
-local songObj = nil
+local streamObj = {}
+local songObj = {}
 
 local function setStreamObject (ytobj, message)
-    streamObj = nil
+    streamObj[message.channel.guild.id] = nil
     if ytobj == nil then return end
     local oldUrl = ytobj.url
     if string.sub(ytobj.url, 1, #"https:") ~= "https:" then
@@ -30,7 +30,7 @@ local function setStreamObject (ytobj, message)
             end
         end
     end
-    streamObj = stream
+    streamObj[message.channel.guild.id] = stream
     msg:setContent('Now playing: '..ytobj.title..' :ok_hand:')
 end
 
@@ -68,15 +68,16 @@ end
 
 local play
 play = function(vc, connection, message)
-    if streamObj == nil then
+    if streamObj[message.channel.guild.id] == nil then
         connection:close()
-        isActive = false
+        isActive[message.channel.guild.id] = false
         return
     end
     local conn = vc:join()
-    conn:playFFmpeg(streamObj)
-    songObj = table.remove(songQueue, 1)
-    setStreamObject(songObj, message)
+    local song = streamObj[message.channel.guild.id]
+    conn:playFFmpeg(song)
+    songObj[message.channel.guild.id] = table.remove(songQueue[message.channel.guild.id], 1)
+    setStreamObject(songObj[message.channel.guild.id], message)
     play(vc, conn, message)
 end
 
@@ -91,17 +92,17 @@ return {
         if vc == nil then return message.channel:send('You must be connected to a voice channel in order to use this command') end
         -- Sub commands
         if args[1] == 'skip' and args[2] == nil then
-            if songObj ~= nil then vc:join():stopStream() end
+            if songObj[message.channel.guild.id] ~= nil then vc:join():stopStream() end
             return
         end
         if args[1] == 'queue' and args[2] == nil then
-            if songObj == nil then return message.channel:send("No song is currently playing!") end
+            if songObj[message.channel.guild.id] == nil then return message.channel:send("No song is currently playing!") end
             local embedFields = {}
-            table.insert(embedFields, { name = "Now playing: ".. songObj.title, value = songObj.url, inline = false })
-            for i, v in pairs(songQueue) do
+            table.insert(embedFields, { name = "Now playing: ".. songObj[message.channel.guild.id].title, value = songObj[message.channel.guild.id].url, inline = false })
+            for i, v in pairs(songQueue[message.channel.guild.id]) do
                 table.insert(embedFields, { name = ""..i..": ".. v.title, value = v.url, inline = false })
             end
-            return helpers.GET_EMBED("Song queue", "​", embedFields, message, songObj.thumbnail)
+            return helpers.GET_EMBED("Song queue", "​", embedFields, message, songObj[message.channel.guild.id].thumbnail)
         end
         local url = ""
         if string.match(args[1], "v=(...........)") == nil then
@@ -112,12 +113,22 @@ return {
             url = helpers.string.split(args[1], '&')[1]
         end
         local vidInfo = getYoutubeVideoInfo(url)
-        table.insert(songQueue, { query = url, url = vidInfo["video_url"], title = vidInfo["title"], thumbnail = vidInfo["thumbnail"]})
-        if not isActive then
-            songObj = table.remove(songQueue, 1)
-            setStreamObject(songObj, message)
-            isActive = true
-            play(vc, nil, message)
+
+        if not songQueue[message.channel.guild.id] then
+            songQueue[message.channel.guild.id] = {}
+        end
+        if not songObj[message.channel.guild.id] then
+            songObj[message.channel.guild.id] = nil
+        end
+
+        table.insert(songQueue[message.channel.guild.id], { query = url, url = vidInfo["video_url"], title = vidInfo["title"], thumbnail = vidInfo["thumbnail"]})
+        if not isActive[message.channel.guild.id] then
+            isActive[message.channel.guild.id] = true
+            coroutine.wrap(function()
+                songObj[message.channel.guild.id] = table.remove(songQueue[message.channel.guild.id], 1)
+                setStreamObject(songObj[message.channel.guild.id], message)
+                play(vc, nil, message)
+            end)()
         else
             message.channel:send {
                 content = 'Added '..vidInfo["title"]..' to the song queue :pencil:',
