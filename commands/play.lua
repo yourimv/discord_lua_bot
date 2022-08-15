@@ -5,7 +5,6 @@ local parse = require('url').parse
 local isActive = {}
 local songQueue = {}
 local streamObj = {}
-local songObj = {}
 
 local function setStreamObject (ytobj, message)
     streamObj[message.channel.guild.id] = nil
@@ -76,8 +75,7 @@ play = function(vc, connection, message)
     local conn = vc:join()
     local song = streamObj[message.channel.guild.id]
     conn:playFFmpeg(song)
-    songObj[message.channel.guild.id] = table.remove(songQueue[message.channel.guild.id], 1)
-    setStreamObject(songObj[message.channel.guild.id], message)
+    setStreamObject(table.remove(songQueue[message.channel.guild.id], 1), message)
     play(vc, conn, message)
 end
 
@@ -92,17 +90,17 @@ return {
         if vc == nil then return message.channel:send('You must be connected to a voice channel in order to use this command') end
         -- Sub commands
         if args[1] == 'skip' and args[2] == nil then
-            if songObj[message.channel.guild.id] ~= nil then vc:join():stopStream() end
+            if streamObj[message.channel.guild.id] ~= nil then vc:join():stopStream() end
             return
         end
         if args[1] == 'queue' and args[2] == nil then
-            if songObj[message.channel.guild.id] == nil then return message.channel:send("No song is currently playing!") end
+            if streamObj[message.channel.guild.id] == nil then return message.channel:send("No song is currently playing!") end
             local embedFields = {}
-            table.insert(embedFields, { name = "Now playing: ".. songObj[message.channel.guild.id].title, value = songObj[message.channel.guild.id].url, inline = false })
+            table.insert(embedFields, { name = "Now playing: ".. streamObj[message.channel.guild.id].title, value = streamObj[message.channel.guild.id].url, inline = false })
             for i, v in pairs(songQueue[message.channel.guild.id]) do
                 table.insert(embedFields, { name = ""..i..": ".. v.title, value = v.url, inline = false })
             end
-            return helpers.GET_EMBED("Song queue", "​", embedFields, message, songObj[message.channel.guild.id].thumbnail)
+            return helpers.GET_EMBED("Song queue", "​", embedFields, message, streamObj[message.channel.guild.id].thumbnail)
         end
         local url = ""
         if string.match(args[1], "v=(...........)") == nil then
@@ -117,16 +115,15 @@ return {
         if not songQueue[message.channel.guild.id] then
             songQueue[message.channel.guild.id] = {}
         end
-        if not songObj[message.channel.guild.id] then
-            songObj[message.channel.guild.id] = nil
+        if not streamObj[message.channel.guild.id] then
+            streamObj[message.channel.guild.id] = nil
         end
 
         table.insert(songQueue[message.channel.guild.id], { query = url, url = vidInfo["video_url"], title = vidInfo["title"], thumbnail = vidInfo["thumbnail"]})
         if not isActive[message.channel.guild.id] then
             isActive[message.channel.guild.id] = true
             coroutine.wrap(function()
-                songObj[message.channel.guild.id] = table.remove(songQueue[message.channel.guild.id], 1)
-                setStreamObject(songObj[message.channel.guild.id], message)
+                setStreamObject(table.remove(songQueue[message.channel.guild.id], 1), message)
                 play(vc, nil, message)
             end)()
         else
